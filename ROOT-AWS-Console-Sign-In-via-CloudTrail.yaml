@@ -1,0 +1,84 @@
+# Copyright 2019 Amazon.com, Inc. or its affiliates. All Rights Reserved.
+# Permission is hereby granted, free of charge, to any person obtaining a copy of this
+# software and associated documentation files (the "Software"), to deal in the Software
+# without restriction, including without limitation the rights to use, copy, modify,
+# merge, publish, distribute, sublicense, and/or sell copies of the Software, and to
+# permit persons to whom the Software is furnished to do so.
+#
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED,
+# INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A
+# PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT
+# HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION
+# OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
+# SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+
+AWSTemplateFormatVersion: '2010-09-09'
+Description: ROOT-AWS-Console-Sign-In-via-CloudTrail
+Metadata:
+  AWS::CloudFormation::Interface:
+    ParameterGroups:
+    - Label:
+        default: Amazon SNS parameters
+      Parameters:
+      - Email Address
+Parameters:
+  EmailAddress:
+    Type: String
+    AllowedPattern: "^[\\x20-\\x45]?[\\w-\\+]+(\\.[\\w]+)*@[\\w-]+(\\.[\\w]+)*(\\.[a-z]{2,})$"
+    ConstraintDescription: Email address required.
+    Description: Enter an email address you want to subscribe to the Amazon SNS topic
+      that will send notifications if your account's AWS root user logs in.
+Resources:
+  RootActivitySNSTopic:
+    Type: AWS::SNS::Topic
+    Properties:
+      DisplayName: ROOT-AWS-Console-Sign-In-via-CloudTrail
+      Subscription:
+      - Endpoint:
+          Ref: EmailAddress
+        Protocol: email
+      TopicName: ROOT-AWS-Console-Sign-In-via-CloudTrail
+  EventsRule:
+    Type: AWS::Events::Rule
+    Properties:
+      Description: Events rule for monitoring root AWS Console Sign In activity
+      EventPattern:
+        detail-type:
+        - AWS Console Sign In via CloudTrail
+        detail:
+          userIdentity:
+            type:
+            - Root
+      Name:
+        Fn::Sub: "${AWS::StackName}-RootActivityRule"
+      State: ENABLED
+      Targets:
+      - Arn:
+          Ref: RootActivitySNSTopic
+        Id: RootActivitySNSTopic
+    DependsOn:
+    - RootActivitySNSTopic
+  RootPolicyDocument:
+    Type: AWS::SNS::TopicPolicy
+    Properties:
+      PolicyDocument:
+        Id: RootPolicyDocument
+        Version: '2012-10-17'
+        Statement:
+        - Sid: RootPolicyDocument
+          Effect: Allow
+          Principal:
+            Service: events.amazonaws.com
+          Action: sns:Publish
+          Resource:
+          - Ref: RootActivitySNSTopic
+      Topics:
+      - Ref: RootActivitySNSTopic
+Outputs:
+  EventsRule:
+    Value:
+      Ref: EventsRule
+    Export:
+      Name:
+        Fn::Sub: "${AWS::StackName}-RootAPIMonitorEventsRule"
+    Description: Event Rule ID.

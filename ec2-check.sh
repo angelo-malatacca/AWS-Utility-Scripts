@@ -8,5 +8,9 @@ echo ""
 for region in `aws ec2 describe-regions --output text | cut -f4`
 do
      echo -e "\nListing Instances in region: $region:"
+     echo "first check:..."
      aws ec2 describe-instances --region $region | jq '.Reservations[] | ( .Instances[] | {state: .State.Name, "Launch time": .LaunchTime, Name: .Tags[].Value, "Instance Id": .InstanceId, "InstanceType": .InstanceType, Key: .KeyName, "Availability zone": .Placement.AvailabilityZone, "Private IP": .PrivateIpAddress, "Public Ip": .PublicIpAddress})'
+     # it there is no tag:
+     echo "second check:..."
+     aws ec2 describe-instances --region $region | jq '.Reservations[] | ( .Instances[] | {state: .State.Name, "Launch time": .LaunchTime, "Instance Id": .InstanceId, "InstanceType": .InstanceType, Key: .KeyName, "Availability zone": .Placement.AvailabilityZone, "Private IP": .PrivateIpAddress, "Public Ip": .PublicIpAddress})'
 done
