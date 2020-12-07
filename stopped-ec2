@@ -1,0 +1,25 @@
+#!/bin/bash
+echo "|======================================|"
+echo "|This script show you all the instances|"
+echo "|  stopped in the selected AWS region  |"
+echo "|======================================|"
+echo ""
+echo "Available regions:"
+aws ec2 describe-regions --all-regions --output text | cut -f4
+echo ""
+echo "Which region do you want to check?"
+read region
+
+aws ec2 describe-instances \
+--region $region \
+--filter Name=instance-state-name,Values=stopped | \
+jq '.Reservations[] | ( .Instances[] | {state: .State.Name, 
+Name: .Tags[].Value, 
+"Instance Id": .InstanceId, 
+"Launch time": .LaunchTime, 
+"Termination time": .StateTransitionReason, 
+"InstanceType": .InstanceType, 
+Key: .KeyName, 
+"Availability zone": .Placement.AvailabilityZone, 
+"Private IP": .PrivateIpAddress, 
+"Public Ip": .PublicIpAddress})'
